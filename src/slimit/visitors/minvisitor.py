@@ -42,6 +42,7 @@ class ECMAMinifier(object):
         self.ifelse_stack = []
 
     def visit(self, node):
+        self._merge_var_statements(node)
         method = 'visit_%s' % node.__class__.__name__
         return getattr(self, method, self.generic_visit)(node)
 
@@ -434,4 +435,25 @@ class ECMAMinifier(object):
 
     def visit_This(self, node):
         return 'this'
+
+    def _merge_var_statements(self, node):
+        elements = None
+        if hasattr(node, 'elements'):
+            elements = node.elements
+        elif hasattr(node, '_children_list'):
+            elements = node._children_list
+        if elements is not None:
+            first_var = None
+            elements_to_delete = []
+            for element in elements:
+                if element.__class__.__name__ == 'VarStatement':
+                    if first_var is None:
+                        first_var = element
+                    else:
+                        first_var._children_list += element._children_list
+                        elements_to_delete.append(element)
+                else:
+                    first_var = None
+            for element in elements_to_delete:
+                elements.remove(element)
 
